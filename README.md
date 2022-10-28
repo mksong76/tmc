@@ -69,8 +69,8 @@ Add torrent wth magnet URL
 <ID>
 ```
 
-It removes specified torrents. If it's empty, then it removes all downloaded
-and stopped torrents.
+It removes specified torrents. If no torrents are specified, then it removes
+all downloaded and stopped torrents.
 
 | Option   | Description                        |
 |----------|------------------------------------|
