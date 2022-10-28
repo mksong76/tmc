@@ -51,10 +51,10 @@ Add torrent wth magnet URL
 <ID>
 ```
 
-| Option   | Description                        |
-|----------|------------------------------------|
-| --detail | Print detail of added torrent      |
-| --delete | Delete torrent file after addition |
+| Option   | Description                                  |
+|----------|----------------------------------------------|
+| --detail | Print details of added torrent instead of ID |
+| --delete | Delete torrent file after addition           |
 
 ## List torrents
 
