@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -136,6 +137,7 @@ func NewAddCommand(vp *viper.Viper) *cobra.Command {
 }
 
 func NewListCommand(vp *viper.Viper) *cobra.Command {
+	var showJSON bool
 	cmd := &cobra.Command{
 		Use:   "ls",
 		Short: "List current torrents",
@@ -149,12 +151,20 @@ func NewListCommand(vp *viper.Viper) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("fail to get torrents err=%w", err)
 			}
-			for _, torrent := range torrents {
-				printTorrent(torrent)
+			if showJSON {
+				je := json.NewEncoder(os.Stdout)
+				je.SetIndent("", "  ")
+				je.Encode(torrents)
+			} else {
+				for _, torrent := range torrents {
+					printTorrent(torrent)
+				}
 			}
 			return nil
 		},
 	}
+	flags := cmd.Flags()
+	flags.BoolVar(&showJSON, "json", false, "JSON Output")
 	return cmd
 }
 
