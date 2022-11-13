@@ -39,10 +39,22 @@ func torrentToString(t *rpc.Torrent) string {
 		if value == 100 {
 			progress = "OK!"
 		} else {
-			progress = fmt.Sprintf("%02d%%", value)
+			progress = fmt.Sprintf("%2d%%", value)
 		}
 	} else {
 		progress = "---"
+	}
+
+	var available string = "---"
+	if t.HaveValid != nil && t.HaveUnchecked != nil && t.DesiredAvailable != nil && t.LeftUntilDone != nil {
+		have := *t.HaveValid + *t.HaveUnchecked
+		avail := have + *t.DesiredAvailable
+		all := have + *t.LeftUntilDone
+		if av := 100 * avail / all; av == 100 {
+			available = "OK!"
+		} else {
+			available = fmt.Sprintf("%2d%%", av)
+		}
 	}
 
 	var status string
@@ -66,7 +78,7 @@ func torrentToString(t *rpc.Torrent) string {
 	} else {
 		name = "-"
 	}
-	return fmt.Sprintf("[ %4s ][ %s ][ %s ] %s", id, progress, status, name)
+	return fmt.Sprintf("[ %4s ][ %s ][ %s ][ %s ] %s", id, available, progress, status, name)
 }
 
 func argsToIDs(args []string) ([]int64, error) {
