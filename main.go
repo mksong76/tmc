@@ -95,24 +95,34 @@ func argsToIDs(args []string) ([]int64, error) {
 }
 
 func NewAddCommand(vp *viper.Viper) *cobra.Command {
-	deleteTorrent := new(bool)
-	detail := new(bool)
+	var detail bool
 	cmd := &cobra.Command{
 		Use:   "add [FILE or URLS]",
 		Short: "Add torrent file or magnet link",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := getClient(vp)
+			deleteTorrent := vp.GetBool("delete")
+			location := vp.GetString("location")
 			for _, arg := range args {
 				var torrent *rpc.Torrent
 				var err error
 				if strings.HasPrefix(arg, "http") {
+					var pLocation *string
+					if len(location) > 0 {
+						pLocation = &location
+					}
 					torrent, err = client.TorrentAdd(&rpc.TorrentAddPayload{
-						Filename: &arg,
+						Filename:    &arg,
+						DownloadDir: pLocation,
 					})
 				} else {
-					torrent, err = client.TorrentAddFile(arg)
-					if err == nil && *deleteTorrent {
+					if len(location) > 0 {
+						torrent, err = client.TorrentAddFileDownloadDir(arg, location)
+					} else {
+						torrent, err = client.TorrentAddFile(arg)
+					}
+					if err == nil && deleteTorrent {
 						if err := os.Remove(arg); err != nil {
 							return fmt.Errorf("fail to remove torrent file=%s err=%w", arg, err)
 						}
@@ -121,7 +131,7 @@ func NewAddCommand(vp *viper.Viper) *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("fail to add torrent arg=%q err=%w", arg, err)
 				}
-				if *detail {
+				if detail {
 					printTorrent(torrent)
 				} else {
 					fmt.Println(*torrent.ID)
@@ -131,8 +141,11 @@ func NewAddCommand(vp *viper.Viper) *cobra.Command {
 		},
 	}
 	flags := cmd.Flags()
-	flags.BoolVar(detail, "detail", false, "Show details of added torrent")
-	flags.BoolVar(deleteTorrent, "delete", false, "Delete torrent file on successful addition")
+	flags.BoolVar(&detail, "detail", false, "Show details of added torrent")
+	flags.Bool("delete", false, "Delete torrent file on successful addition")
+	flags.String("location", "", "Location to put downloaded")
+	vp.BindPFlag("delete", flags.Lookup("delete"))
+	vp.BindPFlag("location", flags.Lookup("location"))
 	return cmd
 }
 
