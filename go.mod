@@ -1,4 +1,4 @@
-module github.com/lanterrt/tmc
+module github.com/mksong76/tmc
 
 go 1.18
 
