@@ -181,6 +181,38 @@ func NewListCommand(vp *viper.Viper) *cobra.Command {
 	return cmd
 }
 
+func NewStopCommand(vp *viper.Viper) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "stop",
+		Short: "Stop the torrents",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := getClient(vp)
+			ids, err := argsToIDs(args)
+			if err != nil {
+				return err
+			}
+			return client.TorrentStopIDs(ids)
+		},
+	}
+	return cmd
+}
+
+func NewStartCommand(vp *viper.Viper) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "start",
+		Short: "Start the torrents",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := getClient(vp)
+			ids, err := argsToIDs(args)
+			if err != nil {
+				return err
+			}
+			return client.TorrentStartIDs(ids)
+		},
+	}
+	return cmd
+}
+
 func isDone(t *rpc.Torrent) bool {
 	if t.Status != nil && *t.Status == rpc.TorrentStatusStopped {
 		if t.LeftUntilDone != nil && *t.LeftUntilDone == 0 {
@@ -312,6 +344,8 @@ func main() {
 	vp.BindPFlags(flags)
 	root.AddCommand(NewAddCommand(vp))
 	root.AddCommand(NewListCommand(vp))
+	root.AddCommand(NewStopCommand(vp))
+	root.AddCommand(NewStartCommand(vp))
 	root.AddCommand(NewRemoveCommand(vp))
 	root.AddCommand(&cobra.Command{
 		Use:   "save",
