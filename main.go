@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -94,6 +95,26 @@ func argsToIDs(args []string) ([]int64, error) {
 	return ids, nil
 }
 
+func getLocation(vp *viper.Viper) (string, error) {
+	location := vp.GetString("location")
+	if len(location) == 0 {
+		return "", nil
+	}
+	if location[0] == '@' {
+		name := location[1:]
+		locations := vp.GetStringMapString("alias")
+		if len(locations) == 0 {
+			return "", errors.New("no alias information")
+		}
+		if alias, ok := locations[name]; ok {
+			return alias, nil
+		} else {
+			return "", fmt.Errorf("unknown location alias %s", name)
+		}
+	}
+	return location, nil
+}
+
 func NewAddCommand(vp *viper.Viper) *cobra.Command {
 	var detail bool
 	cmd := &cobra.Command{
@@ -103,7 +124,10 @@ func NewAddCommand(vp *viper.Viper) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := getClient(vp)
 			deleteTorrent := vp.GetBool("delete")
-			location := vp.GetString("location")
+			location, err := getLocation(vp)
+			if err != nil {
+				return err
+			}
 			for _, arg := range args {
 				var torrent *rpc.Torrent
 				var err error
@@ -143,9 +167,7 @@ func NewAddCommand(vp *viper.Viper) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&detail, "detail", false, "Show details of added torrent")
 	flags.Bool("delete", false, "Delete torrent file on successful addition")
-	flags.String("location", "", "Location to put downloaded")
 	vp.BindPFlag("delete", flags.Lookup("delete"))
-	vp.BindPFlag("location", flags.Lookup("location"))
 	return cmd
 }
 
@@ -208,6 +230,32 @@ func NewStartCommand(vp *viper.Viper) *cobra.Command {
 				return err
 			}
 			return client.TorrentStartIDs(ids)
+		},
+	}
+	return cmd
+}
+
+func NewMoveCommand(vp *viper.Viper) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "move",
+		Short: "Move download location to specified location",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := getClient(vp)
+			ids, err := argsToIDs(args)
+			if err != nil {
+				return err
+			}
+			location, err := getLocation(vp)
+			if err != nil {
+				return err
+			}
+			for _, id := range ids {
+				err = client.TorrentSetLocation(id, location, true)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
 		},
 	}
 	return cmd
@@ -284,6 +332,7 @@ func main() {
 	flags.StringP("password", "w", "", "Transmission password")
 	flags.BoolP("https", "t", false, "Use TLS for connection")
 	flags.String("useragent", "TorrentCLI", "UserAgent name for HTTP Client")
+	flags.StringP("location", "l", "", "Location to put downloaded")
 
 	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		var config rpc.AdvancedConfig
@@ -346,6 +395,7 @@ func main() {
 	root.AddCommand(NewListCommand(vp))
 	root.AddCommand(NewStopCommand(vp))
 	root.AddCommand(NewStartCommand(vp))
+	root.AddCommand(NewMoveCommand(vp))
 	root.AddCommand(NewRemoveCommand(vp))
 	root.AddCommand(&cobra.Command{
 		Use:   "save",
